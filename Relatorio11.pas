@@ -1,0 +1,495 @@
+unit Relatorio11;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, DB, ADODB, Grids, DBGrids, Buttons;
+
+type
+  TfrmRelatorio11 = class(TForm)
+    Label1: TLabel;
+    btnExportar: TSpeedButton;
+    btnImprimir: TSpeedButton;
+    lblTotal: TLabel;
+    lblRTotal: TLabel;
+    GroupBox1: TGroupBox;
+    btnGerar: TSpeedButton;
+    dbgDados: TDBGrid;
+    dsDados: TDataSource;
+    qryDados: TADOQuery;
+    SaveDialog1: TSaveDialog;
+    qryExec: TADOQuery;
+    edtCodigoEmp: TEdit;
+    edtNomeEmp: TEdit;
+    lblCodigoEmpresa: TLabel;
+    Label2: TLabel;
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormShow(Sender: TObject);
+    procedure edtCodigoEmpKeyPress(Sender: TObject; var Key: Char);
+    procedure edtCodigoEmpExit(Sender: TObject);
+    procedure btnGerarClick(Sender: TObject);
+    procedure btnExportarClick(Sender: TObject);
+    procedure qryDadosAfterOpen(DataSet: TDataSet);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  frmRelatorio11: TfrmRelatorio11;
+  parametro: String;
+implementation
+
+{$R *.dfm}
+uses MaskUtils, Math, Principal;
+procedure TfrmRelatorio11.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+qryExec.Close;
+qryDados.Close;
+end;
+
+procedure TfrmRelatorio11.FormShow(Sender: TObject);
+begin
+  if frmPrincipal.lblImprime.Caption = 'T' then //Habilita botão Imprimir
+  begin
+  btnImprimir.Enabled := True
+  end else
+  begin
+  btnImprimir.Enabled := False;
+  end;
+  
+  if frmPrincipal.lblExporta.Caption = 'T' then //Habilita botão Exportar
+  begin
+  btnExportar.Enabled := True;
+  end else
+  begin
+  btnExportar.Enabled := False;
+  end;
+
+  with qryExec do
+  begin
+  Close;
+  SQL.Clear;
+  SQL.Add('ALTER SESSION SET NLS_DATE_FORMAT = '+#39+'DD/MM/YYYY HH24:MI:SS'+#39);
+  ExecSQL;
+  end;
+
+  if frmPrincipal.lblCodRelatorio.Caption = '83' then
+  Label2.Caption := 'Código Beneficiário'
+  else
+  Label2.Caption := 'Empresa';
+
+
+  lblCodigoEmpresa.Caption := '0';
+  edtCodigoEmp.Text := '';
+  edtNomeEmp.Text := '';
+end;
+
+procedure TfrmRelatorio11.edtCodigoEmpKeyPress(Sender: TObject;
+  var Key: Char);
+begin
+    if not (key in ['0'..'9','-',Chr(8), Chr(3), Chr(22), Chr(24), Chr(44)]) then
+      key := #0;
+end;
+
+procedure TfrmRelatorio11.edtCodigoEmpExit(Sender: TObject);
+begin
+
+ if (frmPrincipal.lblCodRelatorio.Caption = '28') or (frmPrincipal.lblCodRelatorio.Caption = '77')
+ or (frmPrincipal.lblCodRelatorio.Caption = '78') or (frmPrincipal.lblCodRelatorio.Caption = '133') then
+ begin
+  if edtCodigoEmp.Text <> '' then
+  begin
+    with qryExec do
+    begin
+    Close;
+    SQL.Clear;
+    SQL.Add('SELECT COD_SET, DESCRICAO FROM IM_SETOR WHERE COD_SET = '+ edtCodigoEmp.Text);
+    Open;
+    end;
+
+    if qryExec.RecordCount > 0 then
+    begin
+    edtNomeEmp.Text := qryExec.FieldByName('DESCRICAO').AsString;
+    lblCodigoEmpresa.Caption := qryExec.FieldByName('COD_SET').AsString;
+    end else
+    begin
+    edtCodigoEmp.Text := '';
+    lblCodigoEmpresa.Caption := '0';
+    edtNomeEmp.Text := '';
+    ShowMessage('Código da Empresa Inválido');
+    end;
+  end;
+ end;
+
+ if frmPrincipal.lblCodRelatorio.Caption = '69' then
+ begin
+  if edtCodigoEmp.Text <> '' then
+  begin
+    with qryExec do
+    begin
+    Close;
+    SQL.Clear;
+    SQL.Add('SELECT COD_SET, DESCRICAO FROM PLATINUM.IM_SETOR WHERE COD_SET = '+ edtCodigoEmp.Text);
+    Open;
+    end;
+
+    if qryExec.RecordCount > 0 then
+    begin
+    edtNomeEmp.Text := qryExec.FieldByName('DESCRICAO').AsString;
+    lblCodigoEmpresa.Caption := qryExec.FieldByName('COD_SET').AsString;
+    end else
+    begin
+    edtCodigoEmp.Text := '';
+    lblCodigoEmpresa.Caption := '0';
+    edtNomeEmp.Text := '';
+    ShowMessage('Código da Empresa Inválido');
+    end;
+  end;
+ end;
+
+ if frmPrincipal.lblCodRelatorio.Caption = '83' then
+ begin
+  if edtCodigoEmp.Text <> '' then
+  begin
+    with qryExec do
+    begin
+    Close;
+    SQL.Clear;
+    SQL.Add('SELECT COD_SEG, NOME FROM IM_SEG WHERE COD_SEG = '+#39+edtCodigoEmp.Text+#39);
+    Open;
+    end;
+
+    if qryExec.RecordCount > 0 then
+    begin
+    edtNomeEmp.Text := qryExec.FieldByName('NOME').AsString;
+    lblCodigoEmpresa.Caption := qryExec.FieldByName('COD_SEG').AsString;
+    end else
+    begin
+    edtCodigoEmp.Text := '';
+    lblCodigoEmpresa.Caption := '0';
+    edtNomeEmp.Text := '';
+    ShowMessage('Código do Beneficiário Inválido');
+    end;
+  end;
+ end;
+
+
+end;
+
+procedure TfrmRelatorio11.btnGerarClick(Sender: TObject);
+begin
+  parametro := '';
+  if  lblCodigoEmpresa.Caption <> '0' then
+  begin
+    if frmPrincipal.lblCodRelatorio.Caption = '83' then
+    parametro := 'Código Beneficiário: '+lblCodigoEmpresa.Caption
+    else
+    parametro := 'Código Empresa: '+lblCodigoEmpresa.Caption;
+
+    with qryDados do
+    begin
+    Close;
+    SQL.Clear;
+    SQL.Add(frmPrincipal.memSQL.Text);
+      if frmPrincipal.lblCodRelatorio.Caption = '83' then
+      SQL.Text := StringReplace(SQL.Text,'&CODIGO',lblCodigoEmpresa.Caption,[rfReplaceAll]) //Alterar parametro dentro do SQL puxado do banco
+      else
+      SQL.Text := StringReplace(SQL.Text,'&EMPRESA',lblCodigoEmpresa.Caption,[rfReplaceAll]); //Alterar parametro dentro do SQL puxado do banco
+    Open;
+    end;
+    lblRTotal.Caption := IntToStr(qryDados.RecordCount);
+
+    with qryExec do // INSERIR LOG DE VISUALIZAÇÃO
+    begin
+    Close;
+    SQL.Clear;
+    SQL.Add('INSERT INTO TI.RELATORIOS_LOG (ID_RELATORIO, USUARIO, ACAO, PARAMETRO, DATA) VALUES ('+frmPrincipal.lblCodRelatorio.Caption+','+#39+frmPrincipal.lbl_Usuario.Caption+#39+', '+#39+'V'+#39+','+#39+parametro+#39+', SYSDATE)');
+    ExecSQL;
+    end;
+  end else
+  begin
+  ShowMessage('Favor informar o parâmetro.');
+  end;
+end;
+
+procedure TfrmRelatorio11.btnExportarClick(Sender: TObject);
+var
+F: TextFile;
+P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16,
+Cod_Set, Descricao, Mat, Inclusao, Tipo, Receita, Util, Cod_Seg, Nome, Idade, Situacao, Utilizacao,
+Cod_Setset, Unidade, DtIni, DtFim, Cod_Unid, cLinha : String;
+begin
+ if qryDados.RecordCount > 0 then
+ begin
+
+   if frmPrincipal.lblCodRelatorio.Caption = '28' then
+   begin
+    if SaveDialog1.Execute then
+    begin
+      AssignFile(F, SaveDialog1.FileName);
+      Rewrite (F);
+      cLinha := '';
+      Writeln (F,cLinha + 'COD_SET' +';'+ 'DESCRICAO' +';'+ 'COD_UNID' +';'+ 'UNIDADE' +';'+ 'COD_SEG' +';'+ 'NOME' +';'+ 'IDADE' +';'+ 'SITUACAO' +';'+ 'UTILIZACAO' +';'+ 'RECEITA');
+      qryDados.First;
+      while not qryDados.Eof do
+        begin
+          Cod_Set                 := qryDados.FIELDBYNAME('COD_SET').AsString;
+          Descricao               := qryDados.FIELDBYNAME('DESCRICAO').AsString;
+          Cod_Unid                := qryDados.FIELDBYNAME('COD_UNID').AsString;
+          Unidade                 := qryDados.FIELDBYNAME('UNIDADE').AsString;
+          Cod_Seg                 := qryDados.FIELDBYNAME('COD_SEG').AsString;
+          Nome                    := qryDados.FIELDBYNAME('NOME').AsString;
+          Idade                   := qryDados.FIELDBYNAME('IDADE').AsString;
+          Situacao                := qryDados.FIELDBYNAME('SITUACAO').AsString;
+          Utilizacao              := qryDados.FIELDBYNAME('UTILIZACAO').AsString;
+          Receita                 := qryDados.FIELDBYNAME('RECEITA').AsString;
+
+          cLinha := '';
+          cLinha := cLinha + Cod_Set +';';
+          cLinha := cLinha + Descricao +';';
+          cLinha := cLinha + Cod_Unid +';';
+          cLinha := cLinha + Unidade +';';
+          cLinha := cLinha + Cod_Seg +';';
+          cLinha := cLinha + Nome +';';
+          cLinha := cLinha + Idade +';';
+          cLinha := cLinha + Situacao +';';
+          cLinha := cLinha + Utilizacao +';';
+          cLinha := cLinha + Receita +';';
+
+          Writeln(F,cLinha);
+          qryDados.Next;
+        end;
+      CloseFile (F);
+      ShowMessage('Arquivo Gerado com sucesso.');
+    end;
+  end;
+
+   if frmPrincipal.lblCodRelatorio.Caption = '69' then
+   begin
+    if SaveDialog1.Execute then
+    begin
+      AssignFile(F, SaveDialog1.FileName);
+      Rewrite (F);
+      cLinha := '';
+      Writeln (F,cLinha + 'EMPRESA' +';'+ 'COD_SEG' +';'+ 'MATRICULA' +';'+ 'NOME' +';'+ 'INCLUSAO' +';'+ 'IDADE' +';'+ 'TIPO' +';'+ 'RECEITA' +';'+ 'UTILIZACAO' +';'+ 'UTILIZACAO_PERCENT' +';'+ 'COD_PLANO' +';'+ 'COD_SUB' +';'+ 'MES' +';'+ 'ANO');
+      qryDados.First;
+      while not qryDados.Eof do
+        begin
+          P1 := qryDados.FIELDBYNAME('EMPRESA').AsString;
+          P2 := qryDados.FIELDBYNAME('COD_SEG').AsString;
+          P3 := qryDados.FIELDBYNAME('MAT').AsString;
+          P4 := qryDados.FIELDBYNAME('NOME').AsString;
+          P5 := qryDados.FIELDBYNAME('DT_INCL').AsString;
+          P6 := qryDados.FIELDBYNAME('IDADE').AsString;
+          P7 := qryDados.FIELDBYNAME('TIPO').AsString;
+          P8 := qryDados.FIELDBYNAME('RECEITA').AsString;
+          P9 := qryDados.FIELDBYNAME('UTILIZACAO').AsString;
+          P10 := qryDados.FIELDBYNAME('%UTILIZACAO').AsString;
+          P11 := qryDados.FIELDBYNAME('COD_PLANO').AsString;
+          P12 := qryDados.FIELDBYNAME('COD_SUB').AsString;
+          P13 := qryDados.FIELDBYNAME('MES').AsString;
+          P14 := qryDados.FIELDBYNAME('ANO').AsString;
+
+          cLinha := '';
+          cLinha := cLinha + P1 +';';
+          cLinha := cLinha + P2 +';';
+          cLinha := cLinha + P3 +';';
+          cLinha := cLinha + P4 +';';
+          cLinha := cLinha + P5 +';';
+          cLinha := cLinha + P6 +';';
+          cLinha := cLinha + P7 +';';
+          cLinha := cLinha + P8 +';';
+          cLinha := cLinha + P9 +';';
+          cLinha := cLinha + P10 +';';
+          cLinha := cLinha + P11 +';';
+          cLinha := cLinha + P12 +';';
+          cLinha := cLinha + P13 +';';
+          cLinha := cLinha + P14 +';';
+
+          Writeln(F,cLinha);
+          qryDados.Next;
+        end;
+      CloseFile (F);
+      ShowMessage('Arquivo Gerado com sucesso.');
+    end;
+  end;
+
+   if frmPrincipal.lblCodRelatorio.Caption = '77' then
+   begin
+    if SaveDialog1.Execute then
+    begin
+      AssignFile(F, SaveDialog1.FileName);
+      Rewrite (F);
+      cLinha := '';
+      Writeln (F,cLinha + 'COD_SEG' +';'+ 'NOME' +';'+ 'COD_UNIDADE' +';'+ 'UNIDADE' +';'+ 'TIPO' +';'+ 'INICIO' +';'+ 'FINAL');
+      qryDados.First;
+      while not qryDados.Eof do
+        begin
+          Cod_Seg                 := qryDados.FIELDBYNAME('COD_SEG').AsString;
+          Nome                    := qryDados.FIELDBYNAME('NOME').AsString;
+          Cod_Setset              := qryDados.FIELDBYNAME('COD_SETSET').AsString;
+          Unidade                 := qryDados.FIELDBYNAME('UNIDADE').AsString;
+          Tipo                    := qryDados.FIELDBYNAME('TIPO').AsString;
+          DtIni                   := qryDados.FIELDBYNAME('DT_INI').AsString;
+          DtFim                   := qryDados.FIELDBYNAME('DT_FIM').AsString;
+
+          cLinha := '';
+          cLinha := cLinha + Cod_Seg +';';
+          cLinha := cLinha + Nome +';';
+          cLinha := cLinha + Cod_Setset +';';
+          cLinha := cLinha + Unidade +';';
+          cLinha := cLinha + Tipo +';';
+          cLinha := cLinha + DtIni +';';
+          cLinha := cLinha + DtFim +';';
+
+          Writeln(F,cLinha);
+          qryDados.Next;
+        end;
+      CloseFile (F);
+      ShowMessage('Arquivo Gerado com sucesso.');
+    end;
+   end;
+
+   if frmPrincipal.lblCodRelatorio.Caption = '78' then
+   begin
+    if SaveDialog1.Execute then
+    begin
+      AssignFile(F, SaveDialog1.FileName);
+      Rewrite (F);
+      cLinha := '';
+      Writeln (F,cLinha + 'COD_SEG' +';'+ 'NOME' +';'+ 'COD_UNIDADE' +';'+ 'UNIDADE' +';'+ 'TIPO' +';'+ 'DT_INCL_PROG' +';'+ 'DT_PROG' +';'+ 'MOTIVO');
+      qryDados.First;
+      while not qryDados.Eof do
+        begin
+          P1  := qryDados.FIELDBYNAME('COD_SEG').AsString;
+          P2  := qryDados.FIELDBYNAME('NOME').AsString;
+          P3  := qryDados.FIELDBYNAME('COD_SETSET').AsString;
+          P4  := qryDados.FIELDBYNAME('UNIDADE').AsString;
+          P5  := qryDados.FIELDBYNAME('TIPO').AsString;
+          P6  := qryDados.FIELDBYNAME('DT_INCLUSAO_PROG').AsString;
+          P7  := qryDados.FIELDBYNAME('DT_PROG').AsString;
+          P8  := qryDados.FIELDBYNAME('MOTIVO').AsString;
+
+          cLinha := '';
+          cLinha := cLinha + P1 +';';
+          cLinha := cLinha + P2 +';';
+          cLinha := cLinha + P3 +';';
+          cLinha := cLinha + P4 +';';
+          cLinha := cLinha + P5 +';';
+          cLinha := cLinha + P6 +';';
+          cLinha := cLinha + P7 +';';
+          cLinha := cLinha + P8 +';';          
+
+          Writeln(F,cLinha);
+          qryDados.Next;
+        end;
+      CloseFile (F);
+      ShowMessage('Arquivo Gerado com sucesso.');
+    end;
+  end;
+
+   if frmPrincipal.lblCodRelatorio.Caption = '83' then
+   begin
+    if SaveDialog1.Execute then
+    begin
+      AssignFile(F, SaveDialog1.FileName);
+      Rewrite (F);
+      cLinha := '';
+      Writeln (F,cLinha + 'COD_SEG' +';'+ 'NOME' +';'+ 'IDADE' +';'+ 'SITUACAO' +';'+ 'UTILIZACAO' +';'+ 'RECEITA');
+      qryDados.First;
+      while not qryDados.Eof do
+        begin
+          Cod_Seg                 := qryDados.FIELDBYNAME('COD_SEG').AsString;
+          Nome                    := qryDados.FIELDBYNAME('NOME').AsString;
+          Idade                   := qryDados.FIELDBYNAME('IDADE').AsString;
+          Situacao                := qryDados.FIELDBYNAME('SITUACAO').AsString;
+          Utilizacao              := qryDados.FIELDBYNAME('UTILIZACAO').AsString;
+          Receita                 := qryDados.FIELDBYNAME('RECEITA').AsString;
+
+          cLinha := '';
+          cLinha := cLinha + Cod_Seg +';';
+          cLinha := cLinha + Nome +';';
+          cLinha := cLinha + Idade +';';
+          cLinha := cLinha + Situacao +';';
+          cLinha := cLinha + Utilizacao +';';
+          cLinha := cLinha + Receita +';';
+
+          Writeln(F,cLinha);
+          qryDados.Next;
+        end;
+      CloseFile (F);
+      ShowMessage('Arquivo Gerado com sucesso.');
+    end;
+  end;
+
+   if frmPrincipal.lblCodRelatorio.Caption = '133' then
+   begin
+    if SaveDialog1.Execute then
+    begin
+      AssignFile(F, SaveDialog1.FileName);
+      Rewrite (F);
+      cLinha := '';
+      Writeln (F,cLinha + 'COD_BOL' +';'+ 'DT_VENC' +';'+ 'DIA_VENC' +';'+ 'COD_SEG' +';'+ 'NOME' +';'+ 'VALOR' +';'+ 'NMES' +';'+ 'COD_UNIDADE' +';'+ 'UNIDADE' +';'+ 'CNPJ_UNIDADE');
+      qryDados.First;
+      while not qryDados.Eof do
+        begin
+          P1  := qryDados.FIELDBYNAME('COD_BOL').AsString;
+          P2  := qryDados.FIELDBYNAME('DT_VENC').AsString;
+          P3  := qryDados.FIELDBYNAME('DIA_VENC').AsString;
+          P4  := qryDados.FIELDBYNAME('COD_SEG').AsString;
+          P5  := qryDados.FIELDBYNAME('NOME').AsString;
+          P6  := qryDados.FIELDBYNAME('VALOR').AsString;
+          P7  := qryDados.FIELDBYNAME('NMES').AsString;
+          P8  := qryDados.FIELDBYNAME('COD_UNIDADE').AsString;
+          P9  := qryDados.FIELDBYNAME('UNIDADE').AsString;
+          P10 := qryDados.FIELDBYNAME('CNPJ_UNIDADE').AsString;
+
+          cLinha := '';
+          cLinha := cLinha + P1 +';';
+          cLinha := cLinha + P2 +';';
+          cLinha := cLinha + P3 +';';
+          cLinha := cLinha + P4 +';';
+          cLinha := cLinha + P5 +';';
+          cLinha := cLinha + P6 +';';
+          cLinha := cLinha + P7 +';';
+          cLinha := cLinha + P8 +';';
+          cLinha := cLinha + P9 +';';
+          cLinha := cLinha + P10 +';';          
+
+          Writeln(F,cLinha);
+          qryDados.Next;
+        end;
+      CloseFile (F);
+      ShowMessage('Arquivo Gerado com sucesso.');
+    end;
+   end;
+
+  with qryExec do // INSERIR LOG DE EXPORTAÇÃO
+  begin
+  Close;
+  SQL.Clear;
+  SQL.Add('INSERT INTO TI.RELATORIOS_LOG (ID_RELATORIO, USUARIO, ACAO, PARAMETRO, DATA) VALUES ('+frmPrincipal.lblCodRelatorio.Caption+','+#39+frmPrincipal.lbl_Usuario.Caption+#39+', '+#39+'E'+#39+', '+#39+parametro+#39+', SYSDATE)');
+  ExecSQL;
+  end;
+ end;
+end;
+
+procedure TfrmRelatorio11.qryDadosAfterOpen(DataSet: TDataSet);
+begin
+  frmPrincipal.DimensionarGrid(dbgDados,Self);
+
+  if frmPrincipal.lblCodRelatorio.Caption = '28' then
+  begin
+    TCurrencyField(qryDados.FieldByName('COD_SET')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('COD_UNID')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('COD_SEG')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('IDADE')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('UTILIZACAO')).DisplayFormat := 'R$ #,##0.00';
+    TCurrencyField(qryDados.FieldByName('RECEITA')).DisplayFormat := 'R$ #,##0.00';
+  end;
+end;
+
+end.

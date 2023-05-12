@@ -1,0 +1,47 @@
+
+
+SELECT B.VENDEDOR, (B.VALOR-NVL(C.ESTORNO,0)) VALOR FROM(
+      SELECT A.VENDEDOR, SUM(A.VALOR) VALOR FROM ( 
+                      SELECT B.COD_VENDA, B.COD_VEND, D.TIPO AS TIPO_VEND, B.NMES, B.COD_SEG, 
+                      A.NOME AS SEGURADO, A.DT_CANC, C.DT_VENC, C.DT_CONCIL,D.NOME AS VENDEDOR, B.MESANO, A.DT_INCL,
+                      NVL(A.COD_RESP, A.COD_SEG) COD_RESP, A.COD_SET, NVL(G.SIGLA,'PARTICULAR') SIGLA,
+                      B.VALOR_BOL, QUALLITY.VALOR_COMISSAO(B.COD_VEND,B.COD_VENDA,B.NMES,B.TIPO,B.CODIGO,B.COD_SEG,
+                      B.VALOR_BOL,'P',B.PORC_COMIS_ANUAL, B.COD_BOL) AS VALOR, DECODE(D.COMIS_1MENPAGA || C.TIPO_CONCIL ,'TA',
+                      QUALLITY.VALOR_COMISSAO(B.COD_VEND,B.COD_VENDA,B.NMES,B.TIPO,B.CODIGO,B.COD_SEG,B.VALOR_BOL,'P',
+                      B.PORC_COMIS_ANUAL, B.COD_BOL),0) AS VALOR_PG
+                      FROM   QUALLITY.IM_SEG A, QUALLITY.IM_CPROV B, QUALLITY.IM_BOLAB C, QUALLITY.IM_VEND D, QUALLITY.IM_SETOR G, QUALLITY.IM_SETSE K  
+                      WHERE  A.COD_SET = G.COD_SET (+)
+                      AND    B.COD_BOL = C.COD_BOL (+)
+                      AND    B.COD_SEG = A.COD_SEG (+)
+                      AND    B.COD_VEND = D.COD_VEND
+                      AND    A.COD_SET = K.COD_SET (+)
+                      AND    A.COD_SETSET = K.COD_SETSET (+)
+                      AND    B.COD_VEND IN (48)
+                      AND    B.MESANO LIKE '2020/07%'
+                                            
+                      UNION ALL 
+
+                      SELECT B.COD_VENDA, B.COD_VEND, D.TIPO AS TIPO_VEND, B.NMES, B.COD_SEG,
+                      A.NOME AS SEGURADO, A.DT_CANC, C.DT_VENC, C.DT_CONCIL, D.NOME AS VENDEDOR, B.MESANO, A.DT_INCL,
+                      NVL ( A.COD_RESP, A.COD_SEG ) COD_RESP, A.COD_SET, NVL(G.SIGLA,'PARTICULAR') SIGLA, B.VALOR_BOL, B.VALOR, B.VALOR_PG                      
+                      FROM   QUALLITY.IM_SEG A, QUALLITY.IM_CVEND B, QUALLITY.IM_BOLAB C, QUALLITY.IM_VEND D, QUALLITY.IM_SETOR G
+                      WHERE  A.COD_SET = G.COD_SET (+)
+                      AND    B.COD_BOL = C.COD_BOL (+)
+                      AND    B.COD_SEG = A.COD_SEG (+)
+                      AND    B.COD_VEND = D.COD_VEND
+                      AND    B.COD_VEND IN (48)
+                      AND    B.MESANO LIKE '2020/07%'
+                      AND    B.PAG_EXT = 'P'
+                      ) A
+      GROUP BY VENDEDOR) B,
+                     (
+                      SELECT B.COD_VEND, D.NOME AS VENDEDOR, SUM(B.VALOR-B.VALOR_PG) ESTORNO
+                      FROM   QUALLITY.IM_CVEND B, QUALLITY.IM_VEND D
+                      WHERE  B.PAG_EXT = 'T'
+                      AND    B.LANC_MAN = 'T'
+                      AND    B.COD_VEND = D.COD_VEND
+                      AND    B.MESANO LIKE '2020/07%'
+                      AND    B.COD_VEND IN (48)
+                      GROUP BY B.COD_VEND, D.NOME
+                      ) C
+       WHERE C.VENDEDOR (+) = B.VENDEDOR          

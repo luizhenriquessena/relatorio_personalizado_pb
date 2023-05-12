@@ -1,0 +1,41 @@
+object frmAguarde: TfrmAguarde
+  Left = 767
+  Top = 477
+  BorderIcons = []
+  BorderStyle = bsSingle
+  Caption = 'Aguarde'
+  ClientHeight = 27
+  ClientWidth = 309
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'MS Sans Serif'
+  Font.Style = []
+  OldCreateOrder = False
+  Position = poScreenCenter
+  PixelsPerInch = 96
+  TextHeight = 13
+  object lblTexto: TLabel
+    Left = 6
+    Top = 8
+    Width = 299
+    Height = 13
+    Alignment = taCenter
+    AutoSize = False
+    Caption = 'Gerando Relat'#243'rio...'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -13
+    Font.Name = 'MS Sans Serif'
+    Font.Style = [fsBold]
+    ParentFont = False
+  end
+  object ProgressBar1: TProgressBar
+    Left = 5
+    Top = 95
+    Width = 300
+    Height = 25
+    TabOrder = 0
+  end
+end

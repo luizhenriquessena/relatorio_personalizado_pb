@@ -1,0 +1,580 @@
+unit Relatorio19;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, DB, ADODB, Grids, DBGrids, Buttons, StdCtrls, Mask;
+
+type
+  TfrmRelatorio19 = class(TForm)
+    Label1: TLabel;
+    btnExportar: TSpeedButton;
+    lblTotal: TLabel;
+    lblRTotal: TLabel;
+    dbgDados: TDBGrid;
+    dsDados: TDataSource;
+    SaveDialog1: TSaveDialog;
+    qryExec: TADOQuery;
+    qryDados: TADOQuery;
+    GroupBox1: TGroupBox;
+    GroupBox2: TGroupBox;
+    Label2: TLabel;
+    Med_DataFinal: TMaskEdit;
+    Med_DataInicio: TMaskEdit;
+    btnGerar: TSpeedButton;
+    cmbTipoGuia: TComboBox;
+    lblTipoGuia: TLabel;
+    cmbTipoInternacao: TComboBox;
+    lblTipoInternacao: TLabel;
+    lblSituacao: TLabel;
+    cmbSituacao: TComboBox;
+    cmbClassificacao: TComboBox;
+    cmbTipoServico: TComboBox;
+    lblClassificacao: TLabel;
+    lblTipoServico: TLabel;
+    procedure Med_DataInicioExit(Sender: TObject);
+    procedure Med_DataFinalExit(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure cmbTipoGuiaChange(Sender: TObject);
+    procedure btnGerarClick(Sender: TObject);
+    procedure qryDadosAfterOpen(DataSet: TDataSet);
+    procedure btnExportarClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  frmRelatorio19: TfrmRelatorio19;
+  parametro: String;
+implementation
+
+uses Math,DataModule, Principal, StrUtils;
+
+{$R *.dfm}
+
+procedure TfrmRelatorio19.Med_DataInicioExit(Sender: TObject);
+var d_Data : TDateTime;
+begin
+  try
+    d_Data := StrToDateTime(Med_DataInicio.Text);
+    Med_DataInicio.Text := FormatDateTime('dd/mm/yyyy',d_Data);
+  except
+    ShowMessage('Data inválida');
+    Med_DataInicio.Text := '  /  /    ';
+    Med_DataInicio.SetFocus;
+  end;
+end;
+
+
+procedure TfrmRelatorio19.Med_DataFinalExit(Sender: TObject);
+var d_Data : TDateTime;
+begin
+  try
+    d_Data := StrToDateTime(Med_DataInicio.Text);
+    Med_DataInicio.Text := FormatDateTime('dd/mm/yyyy',d_Data);
+  except
+    ShowMessage('Data inválida');
+    Med_DataInicio.Text := '  /  /    ';
+    Med_DataInicio.SetFocus;
+  end;
+end;
+
+
+procedure TfrmRelatorio19.FormShow(Sender: TObject);
+begin
+  lblSituacao.Visible := False;
+  lblTipoGuia.Visible := False;
+  lblTipoInternacao.Visible := False;
+  cmbSituacao.Visible := False;
+  cmbTipoGuia.Visible := False;
+  cmbTipoInternacao.Visible := False;
+
+  lblClassificacao.Visible := False;
+  lblTipoServico.Visible := False;
+  cmbClassificacao.Visible := False;
+  cmbTipoServico.Visible := False;
+
+  cmbTipoGuia.Enabled   := True;
+
+  with qryExec do
+  begin
+  Close;
+  SQL.Clear;
+  SQL.Add('ALTER SESSION SET NLS_DATE_FORMAT = '+#39+'DD/MM/YYYY HH24:MI:SS'+#39);
+  ExecSQL;
+  end;
+
+  with qryExec do
+  begin
+  Close;
+  SQL.Clear;
+  SQL.Add('select distinct(descricao) tipo_internacao from quallity.im_tipo_internacao tp');
+  Open;
+  First;
+  end;
+
+  if (frmPrincipal.lblCodRelatorio.Caption = '120') or (frmPrincipal.lblCodRelatorio.Caption = '121')  then
+  begin
+    cmbTipoInternacao.Items.Clear;
+    cmbTipoInternacao.Items.Add('TODOS');
+    repeat
+      cmbTipoInternacao.Items.Add(qryExec.FieldValues['tipo_internacao']);
+      qryExec.Next;
+    until qryExec.Eof;
+    qryExec.Close;
+
+    Med_DataInicio.Clear;
+    Med_DataFinal.Clear;
+    cmbSituacao.ItemIndex := 0;
+    cmbTipoGuia.ItemIndex := 0;
+    cmbTipoInternacao.ItemIndex := 0;
+    lblSituacao.Visible := True;
+    lblTipoGuia.Visible := True;
+    lblTipoInternacao.Visible := True;
+    cmbSituacao.Visible := True;
+    cmbTipoGuia.Visible := True;
+    cmbTipoInternacao.Visible := True;
+  end;
+
+  if frmPrincipal.lblCodRelatorio.Caption = '144' then
+  begin
+    lblClassificacao.Visible := True;
+    lblTipoServico.Visible := True;
+    cmbClassificacao.Visible := True;
+    cmbTipoServico.Visible := True;
+
+    cmbClassificacao.ItemIndex := 0;
+    cmbTipoServico.ItemIndex := 0;
+  end;
+
+  if frmPrincipal.lblExporta.Caption = 'T' then //Habilita botão Exportar
+  begin
+  btnExportar.Enabled := True;
+  end else
+  begin
+  btnExportar.Enabled := False;
+  end;
+
+
+  if frmPrincipal.lblCodRelatorio.Caption = '121' then
+  begin
+    cmbTipoGuia.ItemIndex := 1;
+    cmbTipoGuia.Enabled   := False;
+    cmbTipoInternacao.Enabled := True;
+  end;
+
+end;
+
+procedure TfrmRelatorio19.cmbTipoGuiaChange(Sender: TObject);
+begin
+  cmbTipoInternacao.ItemIndex := 0;
+
+  if cmbTipoGuia.Text = 'INTERNAÇÃO/CIRUR' then
+    cmbTipoInternacao.Enabled := True
+  else
+    cmbTipoInternacao.Enabled := False;
+
+end;
+
+procedure TfrmRelatorio19.btnGerarClick(Sender: TObject);
+begin
+  Med_DataInicio.OnExit(Sender);
+  Med_DataFinal.OnExit(Sender);
+
+  parametro := '';
+
+  if (frmPrincipal.lblCodRelatorio.Caption = '120') or (frmPrincipal.lblCodRelatorio.Caption = '121') then
+  begin
+    if (Med_DataInicio.Text <> '  /  /    ') and (Med_DataFinal.Text <> '  /  /    ') then
+    begin
+      parametro := 'DtInicio: '+Med_DataInicio.Text + ' DtFinal: ' + Med_DataFinal.Text + ' Situação: '+cmbSituacao.Text + ' TipoGuia: '+cmbTipoGuia.Text + ' TipoInter: '+cmbTipoInternacao.Text;
+      with qryDados do
+      begin
+      Close;
+      SQL.Clear;
+      SQL.Add(frmPrincipal.memSQL.Text);
+      SQL.Text := StringReplace(SQL.Text,'&DATA1',Med_DataInicio.Text,[rfReplaceAll]); //Alterar parametro dentro do SQL puxado do banco
+      SQL.Text := StringReplace(SQL.Text,'&DATA2',Med_DataFinal.Text,[rfReplaceAll]); //Alterar parametro dentro do SQL puxado do banco
+
+      case AnsiIndexStr(cmbSituacao.Text,['TODOS','LIBERADO','PENDENTE','NEGADA','SENHA CANCELADA']) of
+      0 :  SQL.Text := StringReplace(SQL.Text,'&SITUACAO','',[rfReplaceAll]); //Alterar parametro dentro do SQL puxado do banco
+      1 :  SQL.Text := StringReplace(SQL.Text,'&SITUACAO','LIBERADO',[rfReplaceAll]); //Alterar parametro dentro do SQL puxado do banco
+      2 :  SQL.Text := StringReplace(SQL.Text,'&SITUACAO','PENDENTE',[rfReplaceAll]); //Alterar parametro dentro do SQL puxado do banco
+      3 :  SQL.Text := StringReplace(SQL.Text,'&SITUACAO','NEGADA',[rfReplaceAll]); //Alterar parametro dentro do SQL puxado do banco
+      4 :  SQL.Text := StringReplace(SQL.Text,'&SITUACAO','SENHA CANCELADA',[rfReplaceAll]); //Alterar parametro dentro do SQL puxado do banco
+      end;
+
+      SQL.Text := StringReplace(SQL.Text,'&TIPO_GUIA',cmbTipoGuia.Text,[rfReplaceAll]); //Alterar parametro dentro do SQL puxado do banco
+
+      if cmbTipoGuia.Text = 'INTERNAÇÃO/CIRUR' then
+      begin
+        if cmbTipoInternacao.Text = 'TODOS' then
+          SQL.Text := StringReplace(SQL.Text,'&TIPO_CIRUR','',[rfReplaceAll]) //Alterar parametro dentro do SQL puxado do banco
+        else
+          SQL.Text := StringReplace(SQL.Text,'&TIPO_CIRUR',cmbTipoInternacao.Text,[rfReplaceAll]); //Alterar parametro dentro do SQL puxado do banco
+      end;
+
+      if frmPrincipal.lblCodRelatorio.Caption = '121' then
+      begin
+        if cmbSituacao.Text = 'LIBERADO' then
+        begin
+          SQL.Add('    and situacao = '+#39+'LIBERADO'+#39+' and guia not in (select ti.achar_guia(2,2,ci.cod_cirur) guia from quallity.im_cirur ci where ci.situacao in (1))');
+          SQL.Add('  group by tipo_guia, dt_lib, dt_lib_senha, dt_exec, dt_internacao, dt_alta, dt_digitacao_guia, situacao, tipo_internacao, senha_lib, guia, guia_prestador, cod_seg, situacao_seg, segurado, cod_plano, plano');
+          SQL.Add('  , cod_emp, empresa, cod_unid, unidade, cod_prest, prestador, cirurgia');
+          SQL.Add('           ,internacao, cod_proced, procedimento, conciliado, vlr_cobrado, vlr_glosa, vlr_pago, cod_med_sol, medico_sol, cod_med_exec, medico_exec, regime, guia_principal');
+          SQL.Add('           ,detalhe_vlr_amb, detalhe_vlr_anest, detalhe_vlr_aux, detalhe_vlr_esp, detalhe_vlr_visitas, detalhe_vlr_exames, detalhe_vlr_servicos, detalhe_vlr_matmed, detalhe_vlr_instr, detalhe_vlr_equipe');
+          SQL.Add('  order by dt_lib, cod_emp, cod_unid, cod_seg desc');
+        end else
+        begin
+          SQL.Add('  group by tipo_guia, dt_lib, dt_lib_senha, dt_exec, dt_internacao, dt_alta, dt_digitacao_guia, situacao, tipo_internacao, senha_lib, guia, guia_prestador, cod_seg, situacao_seg, segurado, cod_plano, plano');
+          SQL.Add('  , cod_emp, empresa, cod_unid, unidade, cod_prest, prestador, cirurgia');
+          SQL.Add('           ,internacao, cod_proced, procedimento, conciliado, vlr_cobrado, vlr_glosa, vlr_pago, cod_med_sol, medico_sol, cod_med_exec, medico_exec, regime, guia_principal');
+          SQL.Add('           ,detalhe_vlr_amb, detalhe_vlr_anest, detalhe_vlr_aux, detalhe_vlr_esp, detalhe_vlr_visitas, detalhe_vlr_exames, detalhe_vlr_servicos, detalhe_vlr_matmed, detalhe_vlr_instr, detalhe_vlr_equipe');
+          SQL.Add('  order by dt_lib, cod_emp, cod_unid, cod_seg desc');
+        end;
+      end else
+      begin
+        if cmbSituacao.Text = 'LIBERADO' then
+        begin
+          SQL.Add('    and situacao = '+#39+'LIBERADO'+#39+' and guia not in (select ti.achar_guia(2,2,ci.cod_cirur) guia from quallity.im_cirur ci where ci.situacao in (1))');
+          SQL.Add('  group by tipo_guia, dt_lib, situacao, tipo_internacao, guia, cod_serv, cod_seg, segurado, cod_plano, plano, cod_emp, empresa, cod_unid, unidade, cod_prest, prestador, cod_tab, cod_proced, procedimento, cirurgia, internacao');
+          SQL.Add('  order by dt_lib, cod_emp, cod_unid, cod_seg desc');
+        end else
+        begin
+          SQL.Add('  group by tipo_guia, dt_lib, situacao, tipo_internacao, guia, cod_serv, cod_seg, segurado, cod_plano, plano, cod_emp, empresa, cod_unid, unidade, cod_prest, prestador, cod_tab, cod_proced, procedimento, cirurgia, internacao');
+          SQL.Add('  order by dt_lib, cod_emp, cod_unid, cod_seg desc');
+        end;
+      end;
+
+
+      Open;
+      end;
+
+      lblRTotal.Caption := IntToStr(qryDados.RecordCount);
+
+      with qryExec do // INSERIR LOG DE VISUALIZAÇÃO
+      begin
+      Close;
+      SQL.Clear;
+      SQL.Add('INSERT INTO TI.RELATORIOS_LOG (ID_RELATORIO, USUARIO, ACAO, PARAMETRO, DATA) VALUES ('+frmPrincipal.lblCodRelatorio.Caption+','+#39+frmPrincipal.lbl_Usuario.Caption+#39+', '+#39+'V'+#39+', '+#39+parametro+#39+', SYSDATE)');
+      ExecSQL;
+      end;
+      Abort;
+    end else
+    begin
+      ShowMessage('Favor informar o período.');
+    end;
+    Abort;
+  end;
+
+  if (frmPrincipal.lblCodRelatorio.Caption = '144') then
+  begin
+    if (Med_DataInicio.Text <> '  /  /    ') and (Med_DataFinal.Text <> '  /  /    ') then
+    begin
+      parametro := 'DtInicio: '+Med_DataInicio.Text + ' DtFinal: ' + Med_DataFinal.Text + ' Classificação: '+cmbClassificacao.Text + ' TipoServico: '+cmbTipoServico.Text;
+      with qryDados do
+      begin
+      Close;
+      SQL.Clear;
+      SQL.Add(frmPrincipal.memSQL.Text);
+      SQL.Text := StringReplace(SQL.Text,'&DATA1',Med_DataInicio.Text,[rfReplaceAll]); //Alterar parametro dentro do SQL puxado do banco
+      SQL.Text := StringReplace(SQL.Text,'&DATA2',Med_DataFinal.Text,[rfReplaceAll]); //Alterar parametro dentro do SQL puxado do banco
+
+      if cmbClassificacao.Text <> 'TODOS' then
+        SQL.Add('and classificacao = '+#39+cmbClassificacao.Text+#39);
+
+      if cmbTipoServico.Text <> 'TODOS' then
+        SQL.Add('and upper(tipo_servico) = '+#39+cmbTipoServico.Text+#39);
+
+      SQL.Add(' order by dt_lib, prestador, tipo_servico, procedimento');
+      Open;
+      end;
+
+      lblRTotal.Caption := IntToStr(qryDados.RecordCount);
+
+      with qryExec do // INSERIR LOG DE VISUALIZAÇÃO
+      begin
+      Close;
+      SQL.Clear;
+      SQL.Add('INSERT INTO TI.RELATORIOS_LOG (ID_RELATORIO, USUARIO, ACAO, PARAMETRO, DATA) VALUES ('+frmPrincipal.lblCodRelatorio.Caption+','+#39+frmPrincipal.lbl_Usuario.Caption+#39+', '+#39+'V'+#39+', '+#39+parametro+#39+', SYSDATE)');
+      ExecSQL;
+      end;
+      Abort;
+    end else
+    begin
+      ShowMessage('Favor informar o período.');
+    end;
+    Abort;
+  end;
+end;
+
+procedure TfrmRelatorio19.qryDadosAfterOpen(DataSet: TDataSet);
+begin
+frmPrincipal.DimensionarGrid(dbgDados,Self);
+
+  if (frmPrincipal.lblCodRelatorio.Caption = '120') then
+  begin
+    TCurrencyField(qryDados.FieldByName('DT_LIB')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('SITUACAO')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('GUIA')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('COD_SERV')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('COD_SEG')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('COD_PLANO')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('COD_EMP')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('COD_UNID')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('COD_PREST')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('COD_TAB')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('COD_PROCED')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('CIRURGIA')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('INTERNACAO')).Alignment := taCenter;
+  end;
+
+  if (frmPrincipal.lblCodRelatorio.Caption = '144') then
+  begin
+    TCurrencyField(qryDados.FieldByName('DT_LIB')).Alignment := taCenter;
+    TCurrencyField(qryDados.FieldByName('VALOR')).DisplayFormat := 'R$ #,##0.00';
+  end;
+end;
+
+procedure TfrmRelatorio19.btnExportarClick(Sender: TObject);
+var
+F: TextFile;
+P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14, P15, P16, P17, P18, P19, P20, P21,
+P22, P23, P24, P25, P26, P27, P28, P29, P30, P31, P32, P33, P34, P35, P36, P37, P38, P39, P40, P41, P42,
+P43, P44, P45, P46, P47, cLinha  : String;
+begin
+ if qryDados.RecordCount > 0 then
+ begin
+  if frmPrincipal.lblCodRelatorio.Caption = '120' then
+  begin
+    if SaveDialog1.Execute then
+    begin
+      AssignFile(F, SaveDialog1.FileName);
+      Rewrite (F);
+      cLinha := '';
+      Writeln (F,cLinha + 'TIPO_GUIA' +';'+ 'DT_LIB' +';'+ 'SITUACAO' +';'+ 'TIPO_INTERNACAO' +';'+ 'GUIA' +';'+ 'COD_SERV' +';'+ 'COD_SEG' +';'+ 'SEGURADO' +';'+ 'COD_PLANO' +';'+ 'PLANO' +';'+ 'COD_EMP' +';'+ 'EMPRESA' +';'+ 'COD_UNID' +';'+ 'UNIDADE' +';'+ 'COD_PREST' +';'+ 'PRESTADOR' +';'+ 'COD_TAB' +';'+ 'COD_PROCED' +';'+ 'PROCEDIMENTO' +';'+ 'CIRURGIA' +';'+ 'INTERNACAO');
+      qryDados.First;
+      while not qryDados.Eof do
+        begin
+          P1   := qryDados.FIELDBYNAME('TIPO_GUIA').AsString;
+          P2   := qryDados.FIELDBYNAME('DT_LIB').AsString;
+          P3   := qryDados.FIELDBYNAME('SITUACAO').AsString;
+          P4   := qryDados.FIELDBYNAME('TIPO_INTERNACAO').AsString;
+          P5   := qryDados.FIELDBYNAME('GUIA').AsString;
+          P6   := qryDados.FIELDBYNAME('COD_SERV').AsString;
+          P7   := qryDados.FIELDBYNAME('COD_SEG').AsString;
+          P8   := qryDados.FIELDBYNAME('SEGURADO').AsString;
+          P9   := qryDados.FIELDBYNAME('COD_PLANO').AsString;
+          P10  := qryDados.FIELDBYNAME('PLANO').AsString;
+          P11  := qryDados.FIELDBYNAME('COD_EMP').AsString;
+          P12  := qryDados.FIELDBYNAME('EMPRESA').AsString;
+          P13  := qryDados.FIELDBYNAME('COD_UNID').AsString;
+          P14  := qryDados.FIELDBYNAME('UNIDADE').AsString;
+          P15  := qryDados.FIELDBYNAME('COD_PREST').AsString;
+          P16  := qryDados.FIELDBYNAME('PRESTADOR').AsString;
+          P17  := qryDados.FIELDBYNAME('COD_TAB').AsString;
+          P18  := qryDados.FIELDBYNAME('COD_PROCED').AsString;
+          P19  := qryDados.FIELDBYNAME('PROCEDIMENTO').AsString;
+          P20  := qryDados.FIELDBYNAME('CIRURGIA').AsString;
+          P21  := qryDados.FIELDBYNAME('INTERNACAO').AsString;
+
+          cLinha := '';
+          cLinha := cLinha + P1 +';';
+          cLinha := cLinha + P2 +';';
+          cLinha := cLinha + P3 +';';
+          cLinha := cLinha + P4 +';';
+          cLinha := cLinha + P5 +';';
+          cLinha := cLinha + P6 +';';
+          cLinha := cLinha + P7 +';';
+          cLinha := cLinha + P8 +';';
+          cLinha := cLinha + P9 +';';
+          cLinha := cLinha + P10 +';';
+          cLinha := cLinha + P11 +';';
+          cLinha := cLinha + P12 +';';
+          cLinha := cLinha + P13 +';';
+          cLinha := cLinha + P14 +';';
+          cLinha := cLinha + P15 +';';
+          cLinha := cLinha + P16 +';';
+          cLinha := cLinha + P17 +';';
+          cLinha := cLinha + P18 +';';
+          cLinha := cLinha + P19 +';';
+          cLinha := cLinha + P20 +';';
+          cLinha := cLinha + P21 +';';
+
+          Writeln(F,cLinha);
+          qryDados.Next;
+        end;
+      CloseFile (F);
+      ShowMessage('Arquivo Gerado com sucesso.');
+    end;
+  end;
+
+  if frmPrincipal.lblCodRelatorio.Caption = '121' then
+  begin
+    if SaveDialog1.Execute then
+    begin
+      AssignFile(F, SaveDialog1.FileName);
+      Rewrite (F);
+      cLinha := '';
+      Writeln (F,cLinha + 'TIPO_GUIA' +';'+ 'DT_LIB' +';'+ 'DT_LIB_SENHA' +';'+ 'DT_EXEC' +';'+ 'DT_INTERNACAO' +';'+ 'DT_ALTA' +';'+ 'DT_DIGITACAO_GUIA' +';'+ 'SITUACAO' +';'+ 'TIPO_INTERNACAO' +';'+ 'SENHA_LIB' +';'+ 'GUIA' +';'+ 'GUIA_PRESTADOR' +';'+ 'COD_SEG' +';'+ 'SEGURADO' +';'+ 'SITUACAO_SEG' +';'+ 'COD_PLANO' +';'+ 'PLANO' +';'+ 'COD_EMP' +';'+ 'EMPRESA' +';'+ 'COD_UNID' +';'+ 'UNIDADE' +';'+ 'COD_PREST' +';'+ 'PRESTADOR' +';'+ 'CIRURGIA' +';'+ 'INTERNACAO' +';'+ 'COD_PROCEDIMENTO' +';'+ 'PROCEDIMENTO' +';'+ 'CONCILIADO' +';'+ 'VLR_COBRADO' +';'+ 'VLR_GLOSA' +';'+ 'VLR_PAGO' +';'+ 'COD_MED_SOL' +';'+ 'MEDICO_SOL' +';'+ 'COD_MED_EXEC' +';'+ 'MEDICO_EXEC' +';'+ 'REGIME' +';'+ 'GUIA_PRINCIPAL' +';'+ 'DETALHE_VLR_AMB' +';'+ 'DETALHE_VLR_ANEST' +';'+ 'DETALHE_VRL_AUX' +';'+ 'DETALHE_VLR_ESP' +';'+ 'DETALHE_VLR_VISITAS' +';'+ 'DETALHE_VLR_EXAMES' +';'+ 'DETALHE_VLR_SERVICOS' +';'+ 'DETALHE_VLR_MATMED' +';'+ 'DETALHE_VLR_INSTR' +';'+ 'DETALHE_VLR_EQUIPE');
+      qryDados.First;
+      while not qryDados.Eof do
+        begin
+          P1   := qryDados.FIELDBYNAME('TIPO_GUIA').AsString;
+          P2   := qryDados.FIELDBYNAME('DT_LIB').AsString;
+          P3   := qryDados.FIELDBYNAME('DT_LIB_SENHA').AsString;
+          P4   := qryDados.FIELDBYNAME('DT_EXEC').AsString;
+          P5   := qryDados.FIELDBYNAME('DT_INTERNACAO').AsString;
+          P6   := qryDados.FIELDBYNAME('DT_ALTA').AsString;
+          P7   := qryDados.FIELDBYNAME('DT_DIGITACAO_GUIA').AsString;
+          P8   := qryDados.FIELDBYNAME('SITUACAO').AsString;
+          P9   := qryDados.FIELDBYNAME('TIPO_INTERNACAO').AsString;
+          P10   := qryDados.FIELDBYNAME('SENHA_LIB').AsString;
+          P11   := qryDados.FIELDBYNAME('GUIA').AsString;
+          P12   := #39+qryDados.FIELDBYNAME('GUIA_PRESTADOR').AsString+#39;
+          P13   := qryDados.FIELDBYNAME('COD_SEG').AsString;
+          P14   := qryDados.FIELDBYNAME('SEGURADO').AsString;
+          P15  := qryDados.FIELDBYNAME('SITUACAO_SEG').AsString;
+          p16  := qryDados.FIELDBYNAME('COD_PLANO').AsString;
+          P17  := qryDados.FIELDBYNAME('PLANO').AsString;
+          P18  := qryDados.FIELDBYNAME('COD_EMP').AsString;
+          P19  := qryDados.FIELDBYNAME('EMPRESA').AsString;
+          P20  := qryDados.FIELDBYNAME('COD_UNID').AsString;
+          P21  := qryDados.FIELDBYNAME('UNIDADE').AsString;
+          P22  := qryDados.FIELDBYNAME('COD_PREST').AsString;
+          P23  := qryDados.FIELDBYNAME('PRESTADOR').AsString;
+          P24  := qryDados.FIELDBYNAME('CIRURGIA').AsString;
+          P25  := qryDados.FIELDBYNAME('INTERNACAO').AsString;
+          P26  := qryDados.FIELDBYNAME('COD_PROCED').AsString;
+          P27  := qryDados.FIELDBYNAME('PROCEDIMENTO').AsString;
+          P28   := qryDados.FIELDBYNAME('CONCILIADO').AsString;
+          P29   := qryDados.FIELDBYNAME('VLR_COBRADO').AsString;
+          P30   := qryDados.FIELDBYNAME('VLR_GLOSA').AsString;
+          P31   := qryDados.FIELDBYNAME('VLR_PAGO').AsString;
+          P32   := qryDados.FIELDBYNAME('COD_MED_SOL').AsString;
+          P33   := qryDados.FIELDBYNAME('MEDICO_SOL').AsString;
+          P34   := qryDados.FIELDBYNAME('COD_MED_EXEC').AsString;
+          P35   := qryDados.FIELDBYNAME('MEDICO_EXEC').AsString;
+          P36   := qryDados.FIELDBYNAME('REGIME').AsString;
+          P37   := qryDados.FIELDBYNAME('GUIA_PRINCIPAL').AsString;
+          P38   := qryDados.FIELDBYNAME('DETALHE_VLR_AMB').AsString;
+          P39   := qryDados.FIELDBYNAME('DETALHE_VLR_ANEST').AsString;
+          P40  := qryDados.FIELDBYNAME('DETALHE_VLR_AUX').AsString;
+          P41  := qryDados.FIELDBYNAME('DETALHE_VLR_ESP').AsString;
+          P42  := qryDados.FIELDBYNAME('DETALHE_VLR_VISITAS').AsString;
+          P43  := qryDados.FIELDBYNAME('DETALHE_VLR_EXAMES').AsString;
+          P44  := qryDados.FIELDBYNAME('DETALHE_VLR_SERVICOS').AsString;
+          P45  := qryDados.FIELDBYNAME('DETALHE_VLR_MATMED').AsString;
+          P46  := qryDados.FIELDBYNAME('DETALHE_VLR_INSTR').AsString;
+          P47  := qryDados.FIELDBYNAME('DETALHE_VLR_EQUIPE').AsString;
+
+
+          cLinha := '';
+          cLinha := cLinha + P1 +';';
+          cLinha := cLinha + P2 +';';
+          cLinha := cLinha + P3 +';';
+          cLinha := cLinha + P4 +';';
+          cLinha := cLinha + P5 +';';
+          cLinha := cLinha + P6 +';';
+          cLinha := cLinha + P7 +';';
+          cLinha := cLinha + P8 +';';
+          cLinha := cLinha + P9 +';';
+          cLinha := cLinha + P10 +';';
+          cLinha := cLinha + P11 +';';
+          cLinha := cLinha + P12 +';';
+          cLinha := cLinha + P13 +';';
+          cLinha := cLinha + P14 +';';
+          cLinha := cLinha + P15 +';';
+          cLinha := cLinha + P16 +';';
+          cLinha := cLinha + P17 +';';
+          cLinha := cLinha + P18 +';';
+          cLinha := cLinha + P19 +';';
+          cLinha := cLinha + P20 +';';
+          cLinha := cLinha + P21 +';';
+          cLinha := cLinha + P22 +';';
+          cLinha := cLinha + P23 +';';
+          cLinha := cLinha + P24 +';';
+          cLinha := cLinha + P25 +';';
+          cLinha := cLinha + P26 +';';
+          cLinha := cLinha + P27 +';';
+          cLinha := cLinha + P28 +';';
+          cLinha := cLinha + P29 +';';
+          cLinha := cLinha + P30 +';';
+          cLinha := cLinha + P31 +';';
+          cLinha := cLinha + P32 +';';
+          cLinha := cLinha + P33 +';';
+          cLinha := cLinha + P34 +';';
+          cLinha := cLinha + P35 +';';
+          cLinha := cLinha + P36 +';';
+          cLinha := cLinha + P37 +';';
+          cLinha := cLinha + P38 +';';
+          cLinha := cLinha + P39 +';';
+          cLinha := cLinha + P40 +';';
+          cLinha := cLinha + P41 +';';
+          cLinha := cLinha + P42 +';';
+          cLinha := cLinha + P43 +';';
+          cLinha := cLinha + P44 +';';
+          cLinha := cLinha + P45 +';';
+          cLinha := cLinha + P46 +';';
+          cLinha := cLinha + P47 +';';
+
+          Writeln(F,cLinha);
+          qryDados.Next;
+        end;
+      CloseFile (F);
+      ShowMessage('Arquivo Gerado com sucesso.');
+    end;
+  end;
+
+  if frmPrincipal.lblCodRelatorio.Caption = '144' then
+  begin
+    if SaveDialog1.Execute then
+    begin
+      AssignFile(F, SaveDialog1.FileName);
+      Rewrite (F);
+      cLinha := '';
+      Writeln (F,cLinha + 'CLASSIFICACAO' +';'+ 'TIPO_SERVICO' +';'+ 'DT_LIB' +';'+ 'COD_SERV' +';'+ 'PROCEDIMENTO' +';'+ 'CLIENTE' +';'+ 'PRESTADOR' +';'+ 'VALOR');
+      qryDados.First;
+      while not qryDados.Eof do
+        begin
+          P1   := qryDados.FIELDBYNAME('CLASSIFICACAO').AsString;
+          P2   := qryDados.FIELDBYNAME('TIPO_SERVICO').AsString;
+          P3   := qryDados.FIELDBYNAME('DT_LIB').AsString;
+          P4   := qryDados.FIELDBYNAME('COD_SERV').AsString;
+          P5   := qryDados.FIELDBYNAME('PROCEDIMENTO').AsString;
+          P6   := qryDados.FIELDBYNAME('CLIENTE').AsString;
+          P7   := qryDados.FIELDBYNAME('PRESTADOR').AsString;
+          P8   := qryDados.FIELDBYNAME('VALOR').AsString;
+
+          cLinha := '';
+          cLinha := cLinha + P1 +';';
+          cLinha := cLinha + P2 +';';
+          cLinha := cLinha + P3 +';';
+          cLinha := cLinha + P4 +';';
+          cLinha := cLinha + P5 +';';
+          cLinha := cLinha + P6 +';';
+          cLinha := cLinha + P7 +';';
+          cLinha := cLinha + P8 +';';
+
+          Writeln(F,cLinha);
+          qryDados.Next;
+        end;
+      CloseFile (F);
+      ShowMessage('Arquivo Gerado com sucesso.');
+    end;
+  end;
+
+  with qryExec do // INSERIR LOG DE EXPORTAÇÃO
+  begin
+  Close;
+  SQL.Clear;
+  SQL.Add('INSERT INTO TI.RELATORIOS_LOG (ID_RELATORIO, USUARIO, ACAO, PARAMETRO, DATA) VALUES ('+frmPrincipal.lblCodRelatorio.Caption+','+#39+frmPrincipal.lbl_Usuario.Caption+#39+', '+#39+'E'+#39+', '+#39+parametro+#39+', SYSDATE)');
+  ExecSQL;
+  end;
+ end;
+end;
+
+end.

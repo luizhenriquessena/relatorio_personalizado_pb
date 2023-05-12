@@ -1,0 +1,55 @@
+unit Relat65;
+
+interface
+
+uses Windows, SysUtils, Messages, Classes, Graphics, Controls,
+  StdCtrls, ExtCtrls, Forms, QuickRpt, QRCtrls;
+
+type
+  TqrpRelat65 = class(TQuickRep)
+    QRBand1: TQRBand;
+    qrlblTitulo: TQRLabel;
+    QRBand2: TQRBand;
+    Campo1: TQRDBText;
+    QRBand3: TQRBand;
+    QRShape2: TQRShape;
+    QRBand4: TQRBand;
+    QRShape8: TQRShape;
+    QRLabel18: TQRLabel;
+    QRLabel14: TQRLabel;
+    ColumnHeaderBand1: TQRBand;
+    QRShape6: TQRShape;
+    QRLabel1: TQRLabel;
+    QRLabel5: TQRLabel;
+    QRLabel7: TQRLabel;
+    QRDBText1: TQRDBText;
+    QRDBText3: TQRDBText;
+    QRDBText6: TQRDBText;
+    QRLabel12: TQRLabel;
+    QRLabel13: TQRLabel;
+    qrlblPagina: TQRLabel;
+    QRSysData2: TQRSysData;
+    QRLabel17: TQRLabel;
+    QRLabel15: TQRLabel;
+    QRLabel10: TQRLabel;
+    QRShape3: TQRShape;
+    QRLabel4: TQRLabel;
+    qrlblTotalReceita: TQRLabel;
+    qrlblTotalDespesa: TQRLabel;
+    QRLabel3: TQRLabel;
+  private
+
+  public
+
+  end;
+
+var
+  qrpRelat65: TqrpRelat65;
+
+implementation
+
+uses Relatorio13, DataModule;
+
+{$R *.DFM}
+
+end.

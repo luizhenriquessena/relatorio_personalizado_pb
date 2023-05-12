@@ -1,0 +1,423 @@
+unit Principal;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, Buttons, Grids, DBGrids, DB, ADODB, IniFiles, ShellAPI,
+  XPMan, AppEvnts, JvExStdCtrls, JvMemo;
+
+type
+  TfrmPrincipal = class(TForm)
+    dbgRelatorios: TDBGrid;
+    GroupBox1: TGroupBox;
+    edtFiltroPesquisa: TEdit;
+    Label1: TLabel;
+    Label3: TLabel;
+    SpeedButton1: TSpeedButton;
+    Button1: TButton;
+    Button2: TButton;
+    rbtFiltroTitulo: TRadioButton;
+    rbtFiltroChave: TRadioButton;
+    rbtFiltroCodigo: TRadioButton;
+    qryRelatorios: TADOQuery;
+    dsRelatorios: TDataSource;
+    lbl_Usuario: TLabel;
+    qryExec: TADOQuery;
+    memDescricao: TMemo;
+    Label2: TLabel;
+    lblExporta: TLabel;
+    lblImprime: TLabel;
+    lblTitulo: TLabel;
+    memSQL: TMemo;
+    qryRelatoriosID: TIntegerField;
+    qryRelatoriosTITULO: TWideStringField;
+    qryRelatoriosCHAVE: TWideStringField;
+    qryRelatoriosFORMULARIO: TWideStringField;
+    qryRelatoriosUSUARIO: TWideStringField;
+    lblCodRelatorio: TLabel;
+    memSQL2: TMemo;
+    XPManifest1: TXPManifest;
+    ApplicationEvents1: TApplicationEvents;
+    qryRelatoriosDESCRICAO: TWideStringField;
+    procedure FormCreate(Sender: TObject);
+    Procedure CriarFormulario (NomeForm: TFormClass);
+    function  GetCaminhoIniFile:String;
+    procedure FormShow(Sender: TObject);
+    procedure SpeedButton1Click(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure rbtFiltroCodigoClick(Sender: TObject);
+    procedure rbtFiltroTituloClick(Sender: TObject);
+    procedure rbtFiltroChaveClick(Sender: TObject);
+    procedure edtFiltroPesquisaKeyPress(Sender: TObject; var Key: Char);
+    procedure dbgRelatoriosDblClick(Sender: TObject);
+    procedure dbgRelatoriosCellClick(Column: TColumn);
+    procedure dbgRelatoriosDrawColumnCell(Sender: TObject;
+      const Rect: TRect; DataCol: Integer; Column: TColumn;
+      State: TGridDrawState);
+    procedure Button1Click(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
+    procedure dbgRelatoriosKeyUp(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure dbgRelatoriosKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
+    procedure ApplicationEvents1Message(var Msg: tagMSG;
+      var Handled: Boolean);
+  private
+    { Private declarations }
+    function UsuarioLogadoWindows: string;
+    procedure LimpaFiltro;
+
+  public
+    { Public declarations }
+    procedure DimensionarGrid(dbg: TDbGrid; var formulario);
+  end;
+
+var
+  frmPrincipal: TfrmPrincipal;
+  frmPadrao: TFormClass;
+implementation
+// Inserir Quando tiver nova tela <<<<<<<<<<<<<<<<<<<
+uses DataModule, Relatorio1, Relatorio2, Relatorio3, Relatorio4, Relatorio5, Relatorio6, Relatorio7
+     ,Relatorio8, Relatorio9, Relatorio10, Relatorio11, Relatorio12, Relatorio13, Relatorio14
+     , Relatorio15, Relatorio16, Relatorio17, Relatorio18, Relatorio19, Relatorio20; //MedicoSolicitante, BenefMaiorCusto;
+
+{$R *.dfm}
+
+{ TfrmPrincipal }
+
+procedure TfrmPrincipal.FormCreate(Sender: TObject);
+var
+  ini : TIniFile;
+  Local, Servidor : String;
+  DataLocal, DataServidor : TDateTime;
+begin
+
+  if not (UpperCase(UsuarioLogadoWindows) = 'LUIZ.HENRIQUE') then
+  begin
+    if not (Application.ExeName = 'C:\Aplicativos\RelatPerson.exe') then
+    begin
+      ShowMessage('Este programa não pode ser executado a partir desta pasta.'+#13+'Copie ele para pasta (C:\Aplicativos) em sua máquina.');
+      Application.Terminate;
+    end;
+  end;
+  
+  ini      := TIniFile.Create(GetCaminhoIniFile);
+  Local    := ini.ReadString('ARQUIVOS', 'dirLocal', '') + 'RelatPerson.exe';
+  Servidor := ini.ReadString('ARQUIVOS', 'dirRemoto', '') + 'RelatPerson.exe';
+
+  if not FileExists(Servidor) then
+  begin
+    Application.MessageBox(Pchar('O arquivo Remoto não foi encontrado.'+#13+Servidor), 'Atenção', MB_OK+MB_ICONEXCLAMATION);
+  end else
+  begin
+    DataLocal    := FileDateToDateTime(FileAge(Local));
+    DataServidor := FileDateToDateTime(FileAge(Servidor));
+
+    if DataLocal <> DataServidor then
+    begin
+    ini.WriteString('ARQUIVOS', 'exec', 'RelatPerson.exe');
+    frmPrincipal.Hide;
+    ShellExecute(Handle,'open',pchar('C:\Aplicativos\Atualizador.exe'),nil,nil,sw_show);
+    Application.Terminate;
+    end;
+  end;
+  lbl_Usuario.Caption := UpperCase(UsuarioLogadoWindows);
+  frmPrincipal.Caption := frmPrincipal.Caption + lbl_Usuario.Caption;
+
+// Inserir Quando tiver nova tela <<<<<<<<<<<<<<<<<<<
+  RegisterClass(TfrmRelatorio1);
+  RegisterClass(TfrmRelatorio2);
+  RegisterClass(TfrmRelatorio3);
+  RegisterClass(TfrmRelatorio4);
+  RegisterClass(TfrmRelatorio5);
+  RegisterClass(TfrmRelatorio6);
+  RegisterClass(TfrmRelatorio7);
+  RegisterClass(TfrmRelatorio8);
+  RegisterClass(TfrmRelatorio9);
+  RegisterClass(TfrmRelatorio10);
+  RegisterClass(TfrmRelatorio11);
+  RegisterClass(TfrmRelatorio12);
+  RegisterClass(TfrmRelatorio13);
+  RegisterClass(TfrmRelatorio14);
+  RegisterClass(TfrmRelatorio15);
+  RegisterClass(TfrmRelatorio16);
+  RegisterClass(TfrmRelatorio17);
+  RegisterClass(TfrmRelatorio18);
+  RegisterClass(TfrmRelatorio19);
+  RegisterClass(TfrmRelatorio20);    
+//  RegisterClass(TfrmMedicoSolicitante);
+//  RegisterClass(TfrmBenefMaiorCusto);
+//---------------------------------------------------
+end;
+
+procedure TfrmPrincipal.CriarFormulario(NomeForm: TFormClass);
+begin
+  try
+    TForm(NomeForm) := NomeForm.Create(Self);
+    TForm(NomeForm).Caption := lblTitulo.Caption;
+    TForm(NomeForm).ShowModal;
+  finally
+    FreeAndNil(NomeForm);
+  end;
+end;
+
+function TfrmPrincipal.UsuarioLogadoWindows: string;
+var
+  NetUserNameLength: DWord;
+begin
+  NetUserNameLength:=50;
+  SetLength(Result, NetUserNameLength);
+  GetUserName(pChar(Result),NetUserNameLength);
+  SetLength(Result, StrLen(pChar(Result)));
+end;
+
+function TfrmPrincipal.GetCaminhoIniFile: String;
+begin
+  result:= ExtractFileDir(Application.ExeName)+'\ConfigArquivos.ini';
+end;
+
+procedure TfrmPrincipal.FormShow(Sender: TObject);
+begin
+  with qryRelatorios do
+  begin
+  Close;
+  SQL.Clear;
+  SQL.Add('SELECT R.ID, R.TITULO, R.CHAVE, R.DESCRICAO, R.FORMULARIO, P.USUARIO');
+  SQL.Add('FROM TI.RELATORIOS R, (SELECT * FROM TI.RELATORIOS_PERMISSAO P WHERE P.USUARIO = '+#39+lbl_Usuario.Caption+#39+') P');
+  SQL.Add('WHERE R.ID = P.ID_RELATORIO (+)');
+  SQL.Add('GROUP BY R.ID, R.TITULO, R.CHAVE, R.DESCRICAO, R.FORMULARIO, P.USUARIO');
+  SQL.Add('ORDER BY USUARIO, ID');
+  Open;
+  end;
+end;
+
+procedure TfrmPrincipal.SpeedButton1Click(Sender: TObject);
+begin
+  if (rbtFiltroCodigo.Checked = True) and (edtFiltroPesquisa.Text = '') then
+  begin
+  ShowMessage('Favor informar o código do relatório.');
+  Abort;
+  end;
+
+  with qryRelatorios do
+  begin
+    Close;
+    SQL.Clear;
+    SQL.Add('SELECT R.ID, R.TITULO, R.CHAVE, R.DESCRICAO, R.FORMULARIO, P.USUARIO');
+    SQL.Add('FROM TI.RELATORIOS R, (SELECT * FROM TI.RELATORIOS_PERMISSAO P WHERE P.USUARIO = '+#39+lbl_Usuario.Caption+#39+') P');
+    SQL.Add('WHERE R.ID = P.ID_RELATORIO (+)');
+  end;
+
+  if rbtFiltroCodigo.Checked = True then
+    qryRelatorios.SQL.Add('AND R.ID = ' + edtFiltroPesquisa.Text);
+
+  if rbtFiltroTitulo.Checked = True then
+    qryRelatorios.SQL.Add('AND R.TITULO LIKE '+#39+'%'+edtFiltroPesquisa.Text+'%'+#39);
+
+  if rbtFiltroChave.Checked = True then
+    qryRelatorios.SQL.Add('AND R.CHAVE LIKE '+#39+'%'+UpperCase(edtFiltroPesquisa.Text)+'%'+#39);
+
+  qryRelatorios.SQL.Add('GROUP BY R.ID, R.TITULO, R.CHAVE, R.DESCRICAO, R.FORMULARIO, P.USUARIO');
+  qryRelatorios.SQL.Add('ORDER BY P.USUARIO, R.ID');
+  qryRelatorios.Open;
+  qryRelatorios.First;
+  memDescricao.Lines.Clear;
+  memDescricao.Lines.Text := qryRelatoriosDESCRICAO.AsString;
+end;
+
+procedure TfrmPrincipal.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+  qryRelatorios.Close;
+  qryExec.Close;
+  DM.conTI_FacPlan.Close;
+end;
+
+procedure TfrmPrincipal.LimpaFiltro;
+begin
+  qryRelatorios.Close;
+  qryRelatorios.SQL.Clear;
+  edtFiltroPesquisa.Text := '';
+end;
+
+procedure TfrmPrincipal.rbtFiltroCodigoClick(Sender: TObject);
+begin
+  LimpaFiltro;
+end;
+
+procedure TfrmPrincipal.rbtFiltroTituloClick(Sender: TObject);
+begin
+  LimpaFiltro;
+end;
+
+procedure TfrmPrincipal.rbtFiltroChaveClick(Sender: TObject);
+begin
+  LimpaFiltro;
+end;
+
+procedure TfrmPrincipal.edtFiltroPesquisaKeyPress(Sender: TObject;
+  var Key: Char);
+begin
+  if key = #13 then
+    SpeedButton1Click(SpeedButton1);
+
+  if rbtFiltroCodigo.Checked = True then
+    begin
+    if not (key in ['0'..'9',Chr(8), Chr(3), Chr(22), Chr(24), Chr(44)]) then
+      key := #0;
+    end;
+end;
+
+procedure TfrmPrincipal.dbgRelatoriosDblClick(Sender: TObject);
+begin
+  lblTitulo.Caption := qryRelatoriosTITULO.AsString;
+  memSQL.Lines.Clear;
+  memSQL2.Lines.Clear;
+
+  if (qryRelatorios.FieldByName('USUARIO').AsString = lbl_Usuario.Caption)
+     or (lbl_Usuario.Caption = 'LUIZ.HENRIQUE')
+ then
+  begin
+    frmpadrao := TFormClass(FindClass(qryRelatorios.FieldByName('FORMULARIO').AsString));
+
+    with qryExec do  //Verificar se usuário tem permissão para imprimir relatório
+    begin
+    Close;
+    SQL.Clear;
+    SQL.Add('SELECT * FROM TI.RELATORIOS_PERMISSAO WHERE USUARIO = '+#39+lbl_Usuario.Caption+#39+' AND ID_RELATORIO = '+#39+qryRelatoriosID.AsString+#39+' AND PERMISSAO = '+#39+'I'+#39);
+    Open;
+    end;
+
+    if (qryExec.RecordCount > 0)
+       or (lbl_Usuario.Caption = 'LUIZ.HENRIQUE') then
+    begin
+    lblImprime.Caption := 'T'
+    end else
+    begin
+    lblImprime.Caption := 'F';
+    end;
+
+    with qryExec do  //Verificar se usuário tem permissão para exportar relatório
+    begin
+    Close;
+    SQL.Clear;
+    SQL.Add('SELECT * FROM TI.RELATORIOS_PERMISSAO WHERE USUARIO = '+#39+lbl_Usuario.Caption+#39+' AND ID_RELATORIO = '+#39+qryRelatoriosID.AsString+#39+' AND PERMISSAO = '+#39+'E'+#39);
+    Open;
+    end;
+    if (qryExec.RecordCount > 0)
+       or (lbl_Usuario.Caption = 'LUIZ.HENRIQUE')
+ then
+    begin
+    lblExporta.Caption := 'T'
+    end else
+    begin
+    lblExporta.Caption := 'F';
+    end;
+
+    with qryExec do // Pega base da consulta no banco
+    begin
+    Close;
+    SQL.Clear;
+    SQL.Add('SELECT SQL FROM TI.RELATORIOS WHERE ID = '+#39+qryRelatoriosID.AsString+#39);
+    Open;
+    end;
+    memSQL.Lines.Add(qryExec.fieldbyname('SQL').AsString);
+
+    with qryExec do // Pega base da consulta auxiliar no banco
+    begin
+    Close;
+    SQL.Clear;
+    SQL.Add('SELECT SQL2 FROM TI.RELATORIOS WHERE ID = '+#39+qryRelatoriosID.AsString+#39);
+    Open;
+    end;
+    memSQL2.Lines.Add(qryExec.fieldbyname('SQL2').AsString);
+
+    lblCodRelatorio.Caption := qryRelatoriosID.AsString; // Guardar Id do relatório solicitado
+    CriarFormulario(frmpadrao); // Chama a função de abrir form
+
+    end else
+    begin
+    ShowMessage('Usuário sem permissão para abrir relatório.');
+  end;
+end;
+
+procedure TfrmPrincipal.dbgRelatoriosCellClick(Column: TColumn);
+begin
+  memDescricao.Lines.Clear;
+  memDescricao.Lines.Text := qryRelatoriosDESCRICAO.AsString;
+end;
+
+procedure TfrmPrincipal.dbgRelatoriosDrawColumnCell(Sender: TObject;
+  const Rect: TRect; DataCol: Integer; Column: TColumn;
+  State: TGridDrawState);
+begin
+  if (qryRelatorios.FieldByName('USUARIO').AsString = '')
+  and (lbl_Usuario.Caption <> 'LUIZ.HENRIQUE')
+then
+  begin
+    dbgRelatorios.Canvas.Brush.Color:= clSilver;
+    dbgRelatorios.DefaultDrawDataCell(Rect, Column.Field, State);
+  end;
+end;
+
+procedure TfrmPrincipal.Button1Click(Sender: TObject);
+begin
+  dbgRelatoriosDblClick(Sender);
+end;
+
+procedure TfrmPrincipal.Button2Click(Sender: TObject);
+begin
+  Close;
+end;
+
+procedure TfrmPrincipal.dbgRelatoriosKeyUp(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  memDescricao.Lines.Clear;
+  memDescricao.Lines.Add(qryRelatorios.FieldByName('DESCRICAO').AsString);
+end;
+
+procedure TfrmPrincipal.dbgRelatoriosKeyDown(Sender: TObject;
+  var Key: Word; Shift: TShiftState);
+begin
+  memDescricao.Lines.Clear;
+  memDescricao.Lines.Add(qryRelatorios.FieldByName('DESCRICAO').AsString);
+end;
+
+procedure TfrmPrincipal.DimensionarGrid(dbg: TDbGrid; var formulario);
+var
+   f, t, Idx: Integer;
+begin
+   for Idx := 0 to dbg.Columns.Count - 1  do
+   begin
+     f := dbg.Canvas.TextWidth(Dbg.Columns[Idx].Field.AsString + 'AAA');
+     t := dbg.Canvas.TextWidth(Dbg.Columns[Idx].Title.Caption+'AAA');
+     if f < t then
+       dbg.Columns[Idx].Width := t
+     else
+       dbg.Columns[Idx].Width := f;
+   end;
+end;
+procedure TfrmPrincipal.ApplicationEvents1Message(var Msg: tagMSG; var Handled: Boolean);
+var  
+  i: SmallInt;
+begin
+  if Msg.message = WM_MOUSEWHEEL then begin
+
+    Msg.message := WM_KEYDOWN;
+    Msg.lParam  := 0;
+
+    i := HiWord(Msg.wParam);
+
+    if i > 0 then begin
+      Msg.wParam := VK_UP;
+    end else begin
+      Msg.wParam := VK_DOWN;
+    end;
+
+    Handled := False;
+  end;
+end;
+
+end.
